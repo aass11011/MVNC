@@ -1,5 +1,27 @@
 import  tensorflow as tf
 import numpy as np
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+
+
+flags.DEFINE_integer('hidden3', 64, 'Number of units in hidden layer 3.')
+flags.DEFINE_float('learning_rate', .5*0.001, 'Initial learning rate.')
+flags.DEFINE_integer('hidden1', 32, 'Number of units in hidden layer 1.')
+flags.DEFINE_integer('hidden2', 32, 'Number of units in hidden layer 2.')
+flags.DEFINE_integer('input_view', 1, 'View No. informative view, ACM:0, DBLP:1')
+flags.DEFINE_float('weight_decay', 0.0001, 'Weight for L2 loss on embedding matrix.')
+flags.DEFINE_float('fea_decay', 0.5, 'feature decay.')
+flags.DEFINE_float('weight_R', 0.001, 'Weight for R loss on embedding matrix.')
+flags.DEFINE_float('dropout', 0., 'Dropout rate (1 - keep probability).')
+flags.DEFINE_float('attn_drop', 0., 'Dropout rate (1 - keep probability).')
+flags.DEFINE_float('ffd_drop', 0., 'Dropout rate (1 - keep probability).')
+flags.DEFINE_integer('features', 1, 'Whether to use features (1) or not (0).')
+flags.DEFINE_integer('seed', 50, 'seed for fixing the results.')
+flags.DEFINE_integer('iterations', 50, 'number of iterations.')
+flags.DEFINE_integer('n_clusters', 3, 'predict label early stop.')
+flags.DEFINE_float('kl_decay', 0.1, 'kl loss decay.')
+
+
 class Model(object):
     def __init__(self,**kwargs):
         allowed_kwargs = {'name','logging'}
@@ -38,7 +60,7 @@ class ARGA(Model):
     def __init__(self,placeholders, numView, num_features, num_clusters, **kwargs):
         super(ARGA, self).__init__(**kwargs)
 
-        self.input = placeholders['features']
+        self.inputs = placeholders['features']
         self.num_features = num_features
         self.adjs = placeholders['adjs']
         self.dropout = placeholders['dropout']
@@ -49,11 +71,14 @@ class ARGA(Model):
         self.build()
     def _build(self):
         with tf.variable_scope('Encoder',reuse=None):
-            self.embedding = []
+            self.embeddings = []
             for v in range(self.numView):
-                self.hidden1 = GraphConvolution(input_dim=self.num_features,output_dim=FLAGS.hidden1,adj)
+                self.hidden1 = GraphConvolution(input_dim=self.num_features,output_dim=FLAGS.hidden1,adj=self.adjs[v],act=tf.nn.relu,dropout=self.dropout,
+                                                logging=self.logging,name='e_dense_1_'+str(v))(self.inputs)
                 self.noise = gaussian_noise_layer(self.hidden1,0.1)
-                self.embedding = GraphConvolution()
+                embeddings = GraphConvolution(input_dim=FLAGS.hidden,output_dim=FLAGS.hidden2,adj=self.adjs[v],act=lambda x:x,dropout=self.dropout,
+                                                  logging=self.logging,name='e_dense_2_'+str(v))(self.noise)
+                self.embeddings.append(embeddings)
 
 _LAYER_UIDS = {}
 
@@ -117,3 +142,11 @@ class GraphConvolution(Layer):
         x = tf.matmul(self.adj, x)
         outputs = self.act(x)
         return outputs
+
+class ClusteringLayer(Layer):
+    def __init__(self,input_dim,n_clusters=3,weight=None,alpha=1.0,**kwargs):
+        super(ClusteringLayer,self).__init__(**kwargs)
+        self.n_clusters = n_clusters
+        self.alpha = alpha
+        self.initial_weights = weight
+        self.vars['clusters'] = weight_variable_glorot()
