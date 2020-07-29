@@ -80,6 +80,20 @@ class ARGA(Model):
                                                   logging=self.logging,name='e_dense_2_'+str(v))(self.noise)
                 self.embeddings.append(embeddings)
 
+        self.cluster_layer = ClusteringLayer(input_dim=FLAGS.hidden2,n_clusters=self.num_clusters,name='clustering')
+        self.cluster_layer_q = self.cluster_layer(self.embeddings[FLAGS.input_view])
+
+        self.reconstructions = []
+        for v in range(self.numView):
+            view_reconstruction = InnerProductDecoder(input_dim=FLAGS.hidden2,name='e_weight_single_',v=v,act=lambda x:x,logging=self.logging)(self.embeddings[v])
+            self.reconstructions.append(view_reconstruction)
+
+        self.reconstructions_fuze = []
+        for v in range(self.numView):
+            view_reconstruction = InnerProductDecoder(input_dim=FLAGS.hidden2,name='e_weight_multi_',v=v,act=lambda x:x,logging=self.logging)(self.embeddings[FLAGS.input_view])
+            self.reconstructions_fuze.append(view_reconstruction)
+
+
 _LAYER_UIDS = {}
 
 
@@ -149,4 +163,29 @@ class ClusteringLayer(Layer):
         self.n_clusters = n_clusters
         self.alpha = alpha
         self.initial_weights = weight
-        self.vars['clusters'] = weight_variable_glorot()
+        self.vars['clusters'] = weight_variable_glorot(self.n_clusters, input_dim,name="cluster_weight")
+
+    def _call(self, inputs):
+        #计算 student's t分布
+        q = tf.constant(1.0)/ (tf.constant(1.0) + tf.reduce_sum(tf.square(tf.expand_dims(inputs,axis=1)-self.vars['cluster']),axis=2))
+        with tf.Session() as sess:
+            print("student's t distribution :qij",sess.run(q))
+        q = tf.pow(q,tf.constant((self.alpha+1)/2.0))
+        q = tf.transpose(tf.transpose(q)/tf.reduce_sum(q,axis=1))
+        return  q
+
+class InnerProductDecoder(Layer):
+    def __init__(self, input_dim, name, v=0, dropout=0,act=tf.nn.sigmoid,**kwargs):
+        super(InnerProductDecoder, self).__init__(**kwargs)
+        with tf.variable_scope('view',reuse=tf.AUTO_REUSE):
+            self.vars['view_weights'] = tf.get_variable(name=name+str(v),shape=[input_dim,input_dim],trainable=True)
+            print('self.vars:view_weight',self.vars['view_weights'])
+        self.dropout = dropout
+        self.act =act
+    def _call(self, inputs):
+        inputs = tf.nn.dropout(inputs,1-self.dropout)
+        x = tf.transpose(inputs)
+        tmp = tf.matmul(inputs,self.vars['view_weights'])
+        x = tf.matmul(tmp, x)
+        outputs = self.act(x)
+        return outputs

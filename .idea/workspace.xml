@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1e9ab225-e1bb-4b95-863f-b944c919c464" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
     </list>
@@ -27,7 +26,7 @@
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../DMGC" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -53,7 +52,7 @@
       <updated>1595126178071</updated>
       <workItem from="1595126179397" duration="600000" />
       <workItem from="1595211679249" duration="19588000" />
-      <workItem from="1595933572059" duration="2171000" />
+      <workItem from="1595933572059" duration="10388000" />
     </task>
     <servers />
   </component>
