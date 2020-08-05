@@ -83,11 +83,12 @@ class ARGA(Model):
         self.cluster_layer = ClusteringLayer(input_dim=FLAGS.hidden2,n_clusters=self.num_clusters,name='clustering')
         self.cluster_layer_q = self.cluster_layer(self.embeddings[FLAGS.input_view])
 
+        #decoder1:将encoder中所有视图的embedding作为输入
         self.reconstructions = []
         for v in range(self.numView):
             view_reconstruction = InnerProductDecoder(input_dim=FLAGS.hidden2,name='e_weight_single_',v=v,act=lambda x:x,logging=self.logging)(self.embeddings[v])
             self.reconstructions.append(view_reconstruction)
-
+        #decoder2:将encoder中 max modularity的视图作为embedding
         self.reconstructions_fuze = []
         for v in range(self.numView):
             view_reconstruction = InnerProductDecoder(input_dim=FLAGS.hidden2,name='e_weight_multi_',v=v,act=lambda x:x,logging=self.logging)(self.embeddings[FLAGS.input_view])
